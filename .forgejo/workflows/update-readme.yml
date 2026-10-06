@@ -1,0 +1,32 @@
+name: Update the README
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: readme
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: docker
+    steps:
+      - name: Checkout repository
+        uses: https://github.com/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Generate the README
+        run: sh scripts/generate-readme.sh > README.md
+
+      - name: Commit it when it changed
+        run: |
+          if git diff --quiet -- README.md; then
+            exit 0
+          fi
+          git config user.name "Forgejo Actions"
+          git config user.email "actions@noreply.git.grenadine.io"
+          git commit -qm "Update the README" -- README.md
+          git push -q origin HEAD:main
