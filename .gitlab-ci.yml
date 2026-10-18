@@ -1,0 +1,21 @@
+# Daily (pipeline schedule, 03:17 UTC) or from the web UI: refreshes the
+# Docker badges of README.md and commits them when they changed.
+# BADGES_BOT_TOKEN: project access token (Maintainer, write_repository), which
+# pushes to the protected default branch.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"
+
+update-docker-badges:
+  image: docker.io/library/debian:trixie-slim
+  script:
+    - apt-get update -qq && apt-get install -qq -y --no-install-recommends ca-certificates curl jq git >/dev/null
+    - sh scripts/update-docker-badges.sh README.md
+    - |
+      if git diff --quiet -- README.md; then
+        exit 0
+      fi
+      git config user.name "Badges bot"
+      git config user.email "badges-bot@noreply.git.grenadine.io"
+      git commit -qm "Update the Docker badges" -- README.md
+      git push -q "https://badges-bot:$BADGES_BOT_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" "HEAD:$CI_DEFAULT_BRANCH"
